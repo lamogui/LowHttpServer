@@ -90,7 +90,7 @@ fn main() {
         }
     }
 
-    let listener: TcpListener = match TcpListener::bind("127.0.0.1:80") {
+    let listener: TcpListener = match TcpListener::bind("0.0.0.0:80") {
         Ok( l ) => { l }
         Err(e) => {
             println!("Erreur de creer le server : {:?}", e);
