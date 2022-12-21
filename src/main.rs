@@ -136,24 +136,29 @@ fn main() {
 									let mut split = requestString.split_whitespace();
 									split.next(); // skip GET/POST etc
 									match ( split.next() ) {
-										Some( res ) => {
-											match ( fileEntries.get_key_value( res ) ) {
-												Some( (key, value) ) => {
-													match stream.write_all( &value ) {
-														Ok(_) => {
-															println!( "Send page {} success for {}", res, socketStr.as_str() );
-															break 'singleRequestLoop;
+										Some( uri ) => {
+											//let uriOwned = uri.to_string();
+											//let uriSlash = uri.to_string() + "/";
+											let possibleUris: [ &str; 1] = [ uri ];
+											for uri in possibleUris.into_iter() {
+												match ( fileEntries.get_key_value( uri ) ) {
+													Some( (key, value) ) => {
+														match stream.write_all( &value ) {
+															Ok(_) => {
+																println!( "Send page {} success for {}", uri, socketStr.as_str() );
+																break 'singleRequestLoop;
+															}
+															Err( e ) => {
+																println!( "Failed to send page {} for {}", uri, socketStr.as_str() );
+																break 'singleRequestLoop;
+															}
 														}
-														Err( e ) => {
-															println!( "Failed to send page {} for {}", res, socketStr.as_str() );
-															break 'singleRequestLoop;
-														}
+													} None => {
+														println!( "No 404 page for request {} from {}", uri, socketStr.as_str() );
+														break 'singleRequestLoop; // todo 
 													}
-												} None => {
-													println!( "No 404 page for request {} from {}", res, socketStr.as_str() );
-													break 'singleRequestLoop; // todo 
-												}
-											} 
+												} 
+											}
 										} None => {
 											// continue until having more characters
 										}
