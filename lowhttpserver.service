@@ -1,0 +1,8 @@
+[Service]
+User=root
+WorkingDirectory=</path/to/your/exe>
+ExecStart=</path/to/your/exe/LowHttpServer> <website.pack>
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
