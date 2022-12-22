@@ -6,3 +6,4 @@ authors = ["lamogui <julien.deloor@gmail.com>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+low = { path= "../low" }
