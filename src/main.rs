@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 fn HandleConnection( mut _stream : TcpStream, _fileEntries: &HashMap< String, Vec<u8> > ) {
-	low::Printf( "Start thread with {:?}\n", _stream );
+	low::Printf!( "Start thread with {:?}\n", _stream );
 	let mut requestBuffer: Vec< u8 > = Vec::new();
 	let socketStr: String= match _stream.peer_addr() {
 		Ok( a ) => {
@@ -95,7 +95,7 @@ fn HandleConnection( mut _stream : TcpStream, _fileEntries: &HashMap< String, Ve
 			}
 		}
 	}
-	low::Printf( "End thread with {:?}\n", _stream );
+	low::Printf!( "End thread with {:?}\n", _stream );
 }
 
 
