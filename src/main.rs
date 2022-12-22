@@ -40,10 +40,8 @@ fn main() {
 					break 'readFile;					
 				}
 			}
-			let mut keySize : u32;
-			unsafe { keySize = transmute( keySizeBuf ); }
-			let mut keyVec: Vec< u8 > = Vec::with_capacity( keySize as usize );
-			unsafe { keyVec.set_len( keySize as usize ); }
+			let keySize : u32 = u2::from_le_bytes( keySizeBuf );
+			let mut keyVec: Vec< u8 > = vec![ 0; keysize ];
 			match reader.read_exact(&mut keyVec) {
 				Ok ( size ) => {
 					//assert_eq!( size, keySize as usize );
@@ -70,10 +68,8 @@ fn main() {
 					break 'readFile;					
 				}
 			}
-			let mut answerSize : u32;
-			unsafe { answerSize = transmute( answerSizeBuf ); }
-			let mut dataVec: Vec< u8 > = Vec::with_capacity( answerSize as usize );
-			unsafe { dataVec.set_len( answerSize as usize ); }
+			let mut answerSize : u32 = u32::from_le_bytes( answerSizeBuf );
+			let mut dataVec: Vec< u8 > = vec![ 0; answerSize ];
 			match reader.read_exact(&mut dataVec) {
 				Ok ( size ) => {
 					//assert_eq!( size, answerSize as usize );
