@@ -22,10 +22,14 @@ use std::fs::File;
 
 use std::collections::HashMap;
 
+use std::time::Instant;
+
 use std::sync::Arc;
 
+static ERROR_501_STR : &str = "HTTP/1.0 501 Not Implemented\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: 73\r\n\r\n<h1>501 Not Implemented</h1><p>This server only support GET requests.</p>";
+static ERROR_404_STR : &str = "HTTP/1.0 404 Not Found\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: 59\r\n\r\n<h1>404 Not Found</h1><p>File not found on this server.</p>";
+
 fn HandleConnection( mut _stream : TcpStream, _fileEntries: &HashMap< String, Vec<u8> > ) {
-	low::Printf!( "Start thread with {:?}\n", _stream );
 	let mut requestBuffer: Vec< u8 > = Vec::new();
 	let socketStr: String= match _stream.peer_addr() {
 		Ok( a ) => {
@@ -35,7 +39,12 @@ fn HandleConnection( mut _stream : TcpStream, _fileEntries: &HashMap< String, Ve
 			"<erreur>".to_string()
 		}
 	};
+	let startedConnectionTime = Instant::now();
 	'singleRequestLoop: loop {
+		if ( startedConnectionTime.elapsed().as_secs() > 5 ) {
+			low::Printf!( "Timeout for request from {} after {} ms\n", socketStr.as_str(), startedConnectionTime.elapsed().as_millis() );
+			break 'singleRequestLoop; // break connection if the request is too long
+		}
 		let mut tempBuffer: [u8; 1024] = [0; 1024]; 
 		match _stream.read( &mut tempBuffer ) {
 			Ok( size ) => {
@@ -58,18 +67,37 @@ fn HandleConnection( mut _stream : TcpStream, _fileEntries: &HashMap< String, Ve
 					// detect empty line that mean request is finnished 
 					if ( requestString.find( "\r\n\r\n" ).is_some() || requestString.find( "\n\n" ).is_some() ) {
 						let mut split = requestString.split_whitespace();
-						split.next(); // skip GET/POST etc
+						let keyword = split.next();
+						if (keyword.is_none()) {
+							continue 'singleRequestLoop;
+						}
+						let keyword: &str = keyword.unwrap();
+						match ( keyword ) { // GET/POST etc 
+							"GET" => {
+
+							} _ => {
+								match _stream.write_all( ERROR_501_STR.as_bytes() ) {
+									Ok(_) => {
+										low::Printf!( "Send 501 page success for {} [{} ms]\n", socketStr.as_str(), startedConnectionTime.elapsed().as_millis() );
+										break 'singleRequestLoop;
+									}
+									Err( e ) => {
+										low::Error!( "Failed to send 501 page for {} {}", socketStr.as_str(), e );
+										break 'singleRequestLoop;
+									}
+								}
+								break 'singleRequestLoop;
+							}
+						}
 						match ( split.next() ) {
 							Some( uri ) => {
-								//let uriOwned = uri.to_string();
-								//let uriSlash = uri.to_string() + "/";
-								let possibleUris: [ &str; 1] = [ uri ];
+								let possibleUris: [ &str; 1] = [ uri ]; 
 								for uri in possibleUris.into_iter() {
 									match ( _fileEntries.get_key_value( uri ) ) {
 										Some( (key, value) ) => {
 											match _stream.write_all( &value ) {
 												Ok(_) => {
-													low::Printf!( "Send page {} success for {}\n", key.as_str(), socketStr.as_str() );
+													low::Printf!( "Send page {} success for {} [{} ms]\n", key.as_str(), socketStr.as_str(), startedConnectionTime.elapsed().as_millis() );
 													break 'singleRequestLoop;
 												}
 												Err( e ) => {
@@ -78,7 +106,16 @@ fn HandleConnection( mut _stream : TcpStream, _fileEntries: &HashMap< String, Ve
 												}
 											}
 										} None => {
-											low::Warning!( "No 404 page for request {} from {}", uri, socketStr.as_str() );
+											match _stream.write_all( ERROR_404_STR.as_bytes() ) {
+												Ok(_) => {
+													low::Printf!( "Send 404 page {} success for {} [{} ms]\n", uri, socketStr.as_str(), startedConnectionTime.elapsed().as_millis() );
+													break 'singleRequestLoop;
+												}
+												Err( e ) => {
+													low::Error!( "Failed to send 404 page {} for {} {}", uri, socketStr.as_str(), e );
+													break 'singleRequestLoop;
+												}
+											}
 											break 'singleRequestLoop; // todo 
 										}
 									} 
@@ -95,7 +132,6 @@ fn HandleConnection( mut _stream : TcpStream, _fileEntries: &HashMap< String, Ve
 			}
 		}
 	}
-	low::Printf!( "End thread with {:?}\n", _stream );
 }
 
 
